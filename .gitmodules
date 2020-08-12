@@ -1,7 +1,3 @@
 [submodule "tacotron2"]
 	path = tacotron2
 	url = http://github.com/NVIDIA/tacotron2
-[submodule "deepvoice3"]
-	path = deepvoice3
-	url = https://github.com/mitsu-h/deepvoice3
-	branch =  6b4596b
