@@ -4,3 +4,4 @@
 [submodule "deepvoice3"]
 	path = deepvoice3
 	url = https://github.com/mitsu-h/deepvoice3
+	branch = use_waveglow
