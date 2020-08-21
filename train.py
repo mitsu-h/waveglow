@@ -36,7 +36,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 from torch.utils.data import DataLoader
 from glow import WaveGlow, WaveGlowLoss
-from mel2samp import Mel2Samp
+from mel2samp import Mel2Samp, FineTuneMel2Samp
 
 def load_checkpoint(checkpoint_path, model, optimizer):
     assert os.path.isfile(checkpoint_path)
@@ -59,7 +59,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
                 'optimizer': optimizer.state_dict(),
                 'learning_rate': learning_rate}, filepath)
 
-def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
+def train(num_gpus, rank, group_name, isFineTuning, output_directory, epochs, learning_rate,
           sigma, iters_per_checkpoint, batch_size, seed, fp16_run,
           checkpoint_path, with_tensorboard):
     torch.manual_seed(seed)
@@ -90,7 +90,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                                                       optimizer)
         iteration += 1  # next iteration is iteration + 1
 
-    trainset = Mel2Samp(**data_config)
+    trainset = Mel2Samp(**data_config) if not isFineTuning else FineTuneMel2Samp(**data_config)
     # =====START: ADDED FOR DISTRIBUTED======
     train_sampler = DistributedSampler(trainset) if num_gpus > 1 else None
     # =====END:   ADDED FOR DISTRIBUTED======
@@ -159,6 +159,8 @@ if __name__ == "__main__":
                         help='rank of process for distributed')
     parser.add_argument('-g', '--group_name', type=str, default='',
                         help='name of group for distributed')
+    parser.add_argument('-t', '--isFineTuning', type=bool, default=False,
+                        help='Do you want to take fine tuning?')
     args = parser.parse_args()
 
     # Parse configs.  Globals nicer in this case
@@ -167,7 +169,7 @@ if __name__ == "__main__":
     config = json.loads(data)
     train_config = config["train_config"]
     global data_config
-    data_config = config["data_config"]
+    data_config = config["data_config"] if not args.isFineTuning else config["finetune_config"]
     global dist_config
     dist_config = config["dist_config"]
     global waveglow_config
@@ -185,4 +187,4 @@ if __name__ == "__main__":
 
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = False
-    train(num_gpus, args.rank, args.group_name, **train_config)
+    train(num_gpus, args.rank, args.group_name, args.isFineTuning, **train_config)
