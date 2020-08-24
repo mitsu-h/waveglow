@@ -86,18 +86,24 @@ def train(num_gpus, rank, group_name, isFineTuning, output_directory, epochs, le
     # Load checkpoint if one exists
     iteration = 0
     if checkpoint_path != "":
-        model, optimizer, iteration = load_checkpoint(checkpoint_path, model,
-                                                      optimizer)
-        iteration += 1  # next iteration is iteration + 1
+        checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
+        if 'iteration' in checkpoint_dict:
+            model, optimizer, iteration = load_checkpoint(checkpoint_path, model,
+                                                          optimizer)
+            iteration += 1  # next iteration is iteration + 1
+        else:
+            model_for_loading = checkpoint_dict['model']
+            model.load_state_dict(model_for_loading.state_dict())
+            print("Loaded pretrained model")
 
     trainset = Mel2Samp(**data_config) if not isFineTuning else FineTuneMel2Samp(**data_config)
     # =====START: ADDED FOR DISTRIBUTED======
     train_sampler = DistributedSampler(trainset) if num_gpus > 1 else None
     # =====END:   ADDED FOR DISTRIBUTED======
-    train_loader = DataLoader(trainset, num_workers=1, shuffle=False,
+    train_loader = DataLoader(trainset, num_workers=0, shuffle=True,
                               sampler=train_sampler,
                               batch_size=batch_size,
-                              pin_memory=False,
+                              pin_memory=True,
                               drop_last=True)
 
     # Get shared output_directory ready
@@ -146,6 +152,8 @@ def train(num_gpus, rank, group_name, isFineTuning, output_directory, epochs, le
                 if rank == 0:
                     checkpoint_path = "{}/waveglow_{}".format(
                         output_directory, iteration)
+                    if isFineTuning:
+                        checkpoint_path += '_fine_tuning'
                     save_checkpoint(model, optimizer, learning_rate, iteration,
                                     checkpoint_path)
 

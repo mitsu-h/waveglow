@@ -67,6 +67,7 @@ def save_dv3_mel(data_root, out_dir, checkpoint_path, speaker_id=None):
 
     for index, (x, mel) in tqdm(enumerate(zip(X, Mel), 1)):
         model.eval()
+        model = model.to(device)
         sequence = x
         sequence = torch.from_numpy(sequence).unsqueeze(0).long().to(device)
         text_positions = torch.arange(1, sequence.size(-1) + 1).unsqueeze(0).long().to(device)

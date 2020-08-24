@@ -137,6 +137,8 @@ class FineTuneMel2Samp(torch.utils.data.Dataset):
             mel_start = random.randint(0, max_mel_start)
             mel = mel[:,mel_start:mel_start+mel_segment]
             audio = audio[mel_start*self.hop_length:mel_start*self.hop_length+self.segment_length]
+            if audio.size(0) < self.segment_length:
+                audio = torch.nn.functional.pad(audio, (0, self.segment_length - audio.size(0)), 'constant').data
         else:
             mel = torch.nn.functional.pad(mel, (0, mel_segment - mel.size(1)), 'constant').data
             audio = torch.nn.functional.pad(audio, (0, self.segment_length - audio.size(0)), 'constant').data
